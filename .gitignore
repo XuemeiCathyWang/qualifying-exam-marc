@@ -1,0 +1,14 @@
+# Mac
+.DS_Store
+
+# brms package source (large, unnecessary)
+Reference Paper/brms/
+
+# R session files
+.Rhistory
+.RData
+.Rproj.user/
+
+# Quarto cache
+_freeze/
+.quarto/
