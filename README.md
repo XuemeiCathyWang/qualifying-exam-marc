@@ -1,8 +1,8 @@
 # Ideal-Point Estimation in the 20th German Bundestag
 
-Qualifying examination submission by Bastian Koch.
+Qualifying examination submission by Xuemei Wang.
 
-**Website:** https://bastiankoch.github.io/qualifying_exam_yy/
+**Website:** https://xuemeicathywang.github.io/qualifying-exam-marc/
 
 ## Overview
 
