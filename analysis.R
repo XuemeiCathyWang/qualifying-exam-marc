@@ -323,8 +323,8 @@ votes_long_prep <- votes_long |>
 
 formula_2pl <- bf(
   y        ~ exp(logalpha) * eta,
-  eta      ~ 1 + (1 | i | vote_id) + (1 | legislator_id),
-  logalpha ~ 1 + (1 | i | vote_id),
+  eta      ~ 1 + (1 | vote_id) + (1 | legislator_id),
+  logalpha ~ 1 + (1 | vote_id),
   nl       = TRUE
 )
 
@@ -342,11 +342,12 @@ fit_2pl <- brm(
   data    = votes_long_prep,
   family  = bernoulli("logit"),
   prior   = prior_2pl,
-  chains  = 4,
-  cores   = 4,
-  iter    = 2000,
-  warmup  = 1000,
+  chains  = 1,
+  cores   = 1,
+  iter    = 500,
+  warmup  = 250,
   seed    = 42,
+  backend = "cmdstanr",
   file    = "models/fit_bundestag_2pl"
 )
 
@@ -447,27 +448,28 @@ save_plot(p_compare_all, "iv_irt_vs_svd.png", width = 7, height = 6)
 # the CDU/CSU — consistent with its role as the liberal pivot in the Ampel
 # coalition.  We evaluate this using the full posterior, not just point estimates.
 
-draws_long <- fit_2pl |>
-  spread_draws(r_legislator_id[legislator_id, term]) |>
-  filter(term == "eta_Intercept") |>
-  left_join(
-    votes_wide |> select(name, party) |> mutate(legislator_id = name),
-    by = "legislator_id"
-  )
+# Extract full posterior draws for person parameters via ranef(summary=FALSE)
+# Returns array: [draws × legislators × parameters]
+person_draws_arr <- ranef(fit_2pl, summary = FALSE)$legislator_id
+
+draws_long <- as_tibble(person_draws_arr[,, "eta_Intercept"]) |>
+  mutate(.draw = row_number()) |>
+  pivot_longer(-.draw, names_to = "name", values_to = "theta") |>
+  left_join(votes_wide |> select(name, party), by = "name")
 
 afd_sign <- draws_long |>
   filter(party == "AfD") |>
-  summarise(m = mean(r_legislator_id)) |>
+  summarise(m = mean(theta)) |>
   pull(m)
 
 if (afd_sign < 0) {
   draws_long <- draws_long |>
-    mutate(r_legislator_id = -r_legislator_id)
+    mutate(theta = -theta)
 }
 
 party_draws <- draws_long |>
   group_by(.draw, party) |>
-  summarise(party_mean = mean(r_legislator_id), .groups = "drop")
+  summarise(party_mean = mean(theta), .groups = "drop")
 
 comparisons <- list(
   c("FDP",      "SPD"),
@@ -481,11 +483,9 @@ cat("\nPart v — Posterior probabilities of ideological ordering:\n")
 prob_results <- map_dfr(comparisons, function(pair) {
   left_party  <- pair[1]
   right_party <- pair[2]
-  prob <- party_draws |>
-    filter(party %in% pair) |>
-    pivot_wider(names_from = party, values_from = party_mean) |>
-    summarise(p = mean(.data[[left_party]] > .data[[right_party]])) |>
-    pull(p)
+  left_vals  <- party_draws |> filter(party == left_party)  |> pull(party_mean)
+  right_vals <- party_draws |> filter(party == right_party) |> pull(party_mean)
+  prob <- mean(left_vals > right_vals)
   cat(sprintf("P(%s > %s) = %.1f%%\n", left_party, right_party, 100 * prob))
   tibble(left = left_party, right = right_party, prob = prob)
 })

@@ -12,3 +12,6 @@ Reference Paper/brms/
 # Quarto cache
 _freeze/
 .quarto/
+
+/.quarto/
+**/*.quarto_ipynb
