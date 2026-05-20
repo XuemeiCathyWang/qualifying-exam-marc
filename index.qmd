@@ -1,7 +1,7 @@
 ---
 title: "Ideal-Point Estimation in the 20th German Bundestag"
 subtitle: "Qualifying Examination"
-author: "Bastian Koch"
+author: "Xuemei Wang"
 date: today
 format:
   html:
